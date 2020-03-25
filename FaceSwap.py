@@ -31,7 +31,32 @@ def getFaceLandmarks(fname,p):
 		for (x,y) in shape:
 			cv2.circle(img,(x,y),2,(0,255,0),-1)
 
+	return img,shape
+
+def triangulation(land_points,img):
+	points = np.array(land_points, np.int32)
+	chull = cv2.convexHull(points)
+	rect = cv2.boundingRect(chull)
+	subdiv = cv2.Subdiv2D(rect)
+	p_list = []
+	for p in land_points:
+		p_list.append((p[0],p[1]))
+	for p in p_list:
+		subdiv.insert(p)
+	triangles = subdiv.getTriangleList()
+	triangles = np.array(triangles, dtype=np.int32)
+
+	for t in triangles:
+		pt1 = (t[0], t[1])
+		pt2 = (t[2], t[3])
+		pt3 = (t[4], t[5])
+
+		cv2.line(img, pt1, pt2, (0, 0, 255), 2)
+		cv2.line(img, pt2, pt3, (0, 0, 255), 2)
+		cv2.line(img, pt1, pt3, (0, 0, 255), 2)
+
 	return img
+
 
 def main():
 	'''
@@ -43,9 +68,9 @@ def main():
 	fname = './TestFolder/Img22.jpg'
 	p = "shape_predictor_68_face_landmarks.dat"
 
-	IMAGE = getFaceLandmarks(fname,p)
-
-	cv2.imshow("Output", IMAGE)
+	IMAGE,shp = getFaceLandmarks(fname,p)
+	IMG = triangulation(shp,IMAGE)
+	cv2.imshow("Output", IMG)
 	cv2.waitKey(0)
 
 
