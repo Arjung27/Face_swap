@@ -79,28 +79,35 @@ def affineBary(img,ini_tri,fin_tri):
 	mesh = np.asarray(mesh)
 	mesh = mesh.reshape(*mesh.shape[:1], -1)
 	grid = np.vstack((mesh, np.ones((1, mesh.shape[1]))))
+	#print(grid[0,1])
 	B = [[src[0][0],src[1][0],src[2][0]],[src[0][1],src[1][1],src[2][1]],[1,1,1]]
 	B_inv = np.linalg.inv(B)
 
 	bc = np.dot(B_inv,grid)
 
 	Z = []
+	D = []
 	for i in range(bc.shape[1]):
 		if bc[0,i]+bc[1,i]+bc[2,i]-1<0.0001 and 0<=bc[0,i] and 0<=bc[1,i] and 0<=bc[2,i] and bc[0,i]<=1 and bc[1,i]<=1 and bc[2,i]<=1:
 			Z.append(bc[:,i])
+			D.append((grid[0,i],grid[1,i]))
 
 	Z = np.asarray(Z)
 	Z = Z.T
+	D = np.asarray(D,dtype='int32')
 
 	A = [[dst[0][0],dst[1][0],dst[2][0]],[dst[0][1],dst[1][1],dst[2][1]],[1,1,1]]
 	coord = np.dot(A,Z)
 	xA = coord[0,:]/coord[2,:]
 	yA = coord[1,:]/coord[2,:]
-	
-	xi = np.linspace(0, img.shape[1], img.shape[1]+1)
-	yi = np.linspace(0, img.shape[0], img.shape[0]+1)	
-	for x,y in zip(xA,yA):
+	#print(len(xA))
+	xi = np.linspace(0, img.shape[1], img.shape[1],endpoint=False)
+	yi = np.linspace(0, img.shape[0], img.shape[0],endpoint=False)
+	dest = np.zeros((img.shape[1],img.shape[0],3), np.uint8)
+
+	for i,(x,y) in enumerate(zip(xA,yA)):
 		blue = img[:,:,0]
+		#print(blue.shape,xi.shape,yi.shape)
 		b = interp2d(xi, yi, blue, kind='cubic')
 		bl = b(x,y)
 		green = img[:,:,1]
@@ -109,11 +116,10 @@ def affineBary(img,ini_tri,fin_tri):
 		red = img[:,:,2]
 		r = interp2d(xi, yi, red, kind='cubic')
 		re = r(x,y)
+		dest[D[i,0],D[i,1]] = (bl,gr,re)
 
-		print(bl.shape)
 
-
-	return A
+	return dest
 	
 
 
@@ -128,7 +134,7 @@ def main():
 	tname = './TestFolder/Img22.jpg'
 	sname = './TestSet_P2/Rambo.jpg'
 	p = "shape_predictor_68_face_landmarks.dat"
-	imge = cv2.imread(tname)
+	imge = cv2.imread(sname)
 
 	IMAGE,shp = getFaceLandmarks(tname,p)
 	IMG,V = triangulation(shp,IMAGE)
@@ -137,6 +143,7 @@ def main():
 	IMGs,Vs = triangulation(shps,IMAGEs)	
 	a = affineBary(imge,V[0],Vs[0])
 	#print(a[0][2]+a[1][2]+a[2][2])
+	print(a.shape)
 	cv2.imshow("Output", IMG)
 	cv2.waitKey(0)
 
