@@ -15,8 +15,50 @@ def videoToImage(fname,tarname):
 		cv2.imwrite(tarname+'/Img'+str(i)+'.jpg',frame)
 		i+=1
 
+
 	cap.release()
 	cv2.destroyAllWindows()
+
+def videoDetector(fname,p):
+
+	cap = cv2.VideoCapture(fname)
+	frame_width = int(cap.get(3))
+	frame_height = int(cap.get(4))
+	vidWriter = cv2.VideoWriter("./video_output.mp4",cv2.VideoWriter_fourcc(*'mp4v'), 24, (frame_width, frame_height))
+	sname = './TestSet_P2/Rambo.jpg'
+	img1 = cv2.imread(sname) 
+	i=0
+	X = np.zeros((frame_height,frame_width,3))
+	Y = np.zeros((68,2)) 
+	while(cap.isOpened()):
+		ret,frame = cap.read()
+		if ret == False:
+			break
+		if i==99 or i==106 or i==117 or i ==121 or i ==127 or i ==130 or i==136 or i==147 or i==201:
+			F = X
+		else:
+			cv2.imwrite('temp.jpg',frame)
+			tname = 'temp.jpg'
+			img2 = cv2.imread(tname)
+			_,shp = getFaceLandmarks(tname,p)
+			if (shp[0,0]==0):
+				print('miss')
+				shp = Y
+			Y = shp
+			_,V,VP,rectangle = triangulation(shp,frame)
+			_,shps = getFaceLandmarks(sname,p)
+			Vs,IMGs = doTriangulate(shps,VP,img1)
+			a,b = swapFace(img2,img1,V,Vs)
+			A = interpolate(img1,img2,a,b)
+			F = blendFace(rectangle,img2,A)
+
+		vidWriter.write(F)
+		X=F
+		i+=1
+		print(i)
+
+	cap.release()
+	vidWriter.release()
 
 def getFaceLandmarks(fname,p):
 	detector = dlib.get_frontal_face_detector()
@@ -25,15 +67,41 @@ def getFaceLandmarks(fname,p):
 	#img = imutils.resize(img,width = 320)
 	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	bbox = detector(gray,0)
+	if (len(bbox)==0):
+		s = np.zeros((68,2))
+		return img,s
 	for (i,bbox) in enumerate(bbox):
 		shape = predictor(gray,bbox)
 		shape = face_utils.shape_to_np(shape)
 		
-		for (x,y) in shape:
-			cv2.circle(img,(x,y),2,(0,255,0),-1)
+		#for (x,y) in shape:
+		#	cv2.circle(img,(x,y),2,(0,255,0),-1)
 
 	return img,shape
 
+
+'''
+def getFaceLandmarks(img,p):
+	detector = dlib.get_frontal_face_detector()
+	predictor = dlib.shape_predictor(p)
+	#img = cv2.imread(fname)
+	#img = imutils.resize(img,width = 320)
+	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+	bbox = detector(gray,0)
+	#print(len(bbox))
+	if (len(bbox)==0):
+		s = np.zeros((68,2))
+		s[0,:] = 0
+		return img,s
+	
+	for (i,bbox) in enumerate(bbox):
+		#print(i,bbox)
+		shape = predictor(gray,bbox)
+		shape = face_utils.shape_to_np(shape)
+		#for (x,y) in shape:
+		#	cv2.circle(img,(x,y),2,(0,255,0),-1)
+	return img,shape
+'''
 def triangulation(land_points,img):
 	points = np.array(land_points, np.int32)
 	chull = cv2.convexHull(points)
@@ -80,9 +148,9 @@ def triangulation(land_points,img):
 			vert.append((points[temp[0]],points[temp[1]],points[temp[2]]))
 			VPoint.append((temp[0],temp[1],temp[2]))
 		'''
-		cv2.line(img, tuple(points[temp[0]]), tuple(points[temp[1]]), (0, 0, 255), 2)
-		cv2.line(img, tuple(points[temp[1]]), tuple(points[temp[2]]), (0, 0, 255), 2)
-		cv2.line(img, tuple(points[temp[0]]), tuple(points[temp[2]]), (0, 0, 255), 2)
+		#cv2.line(img, tuple(points[temp[0]]), tuple(points[temp[1]]), (0, 0, 255), 2)
+		#cv2.line(img, tuple(points[temp[1]]), tuple(points[temp[2]]), (0, 0, 255), 2)
+		#cv2.line(img, tuple(points[temp[0]]), tuple(points[temp[2]]), (0, 0, 255), 2)
 	vert = np.asarray(vert)
 	VPoint = np.asarray(VPoint)
 	chull = np.reshape(chull,(chull.shape[0],chull.shape[2]))
@@ -93,10 +161,10 @@ def doTriangulate(PIndex,TIndex,img):
 	for ti in TIndex:
 		T.append((PIndex[ti[0]],PIndex[ti[1]],PIndex[ti[2]]))
 	T = np.asarray(T)
-	for t in T:
-		cv2.line(img, tuple(t[0]), tuple(t[1]), (0, 0, 255), 2)
-		cv2.line(img, tuple(t[1]), tuple(t[2]), (0, 0, 255), 2)
-		cv2.line(img, tuple(t[0]), tuple(t[2]), (0, 0, 255), 2)
+	#for t in T:
+	#	cv2.line(img, tuple(t[0]), tuple(t[1]), (0, 0, 255), 2)
+	#	cv2.line(img, tuple(t[1]), tuple(t[2]), (0, 0, 255), 2)
+	#	cv2.line(img, tuple(t[0]), tuple(t[2]), (0, 0, 255), 2)
 	return T, img
 
 def affineBary(img,ini_tri,fin_tri,size):
@@ -193,23 +261,20 @@ def main():
 	videoToImage(fname,tarname)
 	'''
 	
-	tname = './TestFolder/Img239.jpg'
+	tname = './TestFolder/Img25.jpg'
 	sname = './TestSet_P2/Rambo.jpg'
+	fname = './TestSet_P2/Test1.mp4'
 	p = "shape_predictor_68_face_landmarks.dat"
+	videoDetector(fname,p)
+	'''
 	img1 = cv2.imread(sname)
 	img2 = cv2.imread(tname)
 
-	IMAGE,shp = getFaceLandmarks(tname,p)
-	IMG,V,VP,rectangle = triangulation(shp,IMAGE)
-	IMAGEs,shps = getFaceLandmarks(sname,p)
-	Vs,IMGs = doTriangulate(shps,VP,IMAGEs)
-	a,b = swapFace(img2,img1,V,Vs)
-	A = interpolate(img1,img2,a,b)
-	F = blendFace(rectangle,img2,A)	
-	#cv2.imshow('Output',A)
-	#cv2.waitKey(0)
-	cv2.imshow('Blend',F)
+	IMAGE,shp = getFaceLandmarks(img2,p)
+	#IMG,V,VP,rectangle = triangulation(shp,IMAGE)
+	cv2.imshow('Output',IMAGE)
 	cv2.waitKey(0)
+	'''
 	
 
 if __name__ == '__main__':
