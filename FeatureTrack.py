@@ -26,6 +26,7 @@ def videoDetector(fname,p):
 	frame_height = int(cap.get(4))
 	vidWriter = cv2.VideoWriter("./video_output.mp4",cv2.VideoWriter_fourcc(*'mp4v'), 24, (frame_width, frame_height))
 	i=0
+	#while(cap.isOpened()):
 	while(cap.isOpened()):
 		ret,frame = cap.read()
 		if ret == False:
@@ -33,27 +34,43 @@ def videoDetector(fname,p):
 		IMAGE,shp = getFaceLandmarks(frame,p)
 
 		shp = np.asarray(shp,dtype='float64')
-		state = shp
+		st = shp.T
+		st = np.reshape(st,-1)
+		st = st.T
+		st =np.reshape(st,(st.shape[0],1))
+		vel = np.zeros((136,1),dtype='float64')
+		state = np.concatenate((st,vel),axis=0)
 		print(state.shape)
-		kalman = cv2.KalmanFilter(4, 2, 0)
-		kalman.transitionMatrix = np.array([[1., 0., .1, 0.],
-                                        [0., 1., 0., .1],
-                                        [0., 0., 1., 0.],
-                                        [0., 0., 0., 1.]])
-		kalman.measurementMatrix = 1. * np.eye(2, 4)  # you can tweak these to make the tracker
-		kalman.processNoiseCov = 1e-5 * np.eye(4, 4)  # respond faster to change and be less smooth
-		kalman.measurementNoiseCov = 1e-3 * np.eye(2, 2)
-		kalman.errorCovPost = 1e-1 * np.eye(4, 4)
-		kalman.statePost = state 
+		#print(state.shape)
+		kalman = cv2.KalmanFilter(272, 136, 0)
+		trMatrix = np.zeros((272,272),dtype='float64')
+		for i in range(trMatrix.shape[0]):
+			for j in range(trMatrix.shape[1]):
+				if i==j or (j-136)==i:
+					trMatrix[i][j]=1.0
+				else:
+					trMatrix[i][j]=0.0
+
+		kalman.transitionMatrix = trMatrix
+		#kalman.transitionMatrix = np.array([[1., 0., .1, 0.],
+        #                                [0., 1., 0., .1],
+        #                                [0., 0., 1., 0.],
+        #                                [0., 0., 0., 1.]])
+		kalman.measurementMatrix = 1.*np.eye(136, 272)
+		kalman.processNoiseCov = 1e-5 * np.eye(272)
+		kalman.measurementNoiseCov = 1e-3 * np.eye(136, 136)
+		kalman.errorCovPost = 1e-1 * np.eye(272, 272)
+		kalman.statePost = np.zeros((272,1),dtype='float64')
 		while(1):
 			ret, frame = cap.read()  # read another frame
 			if ret == False:
 				break
 			prediction = kalman.predict()
 			IMAGE,shp = getFaceLandmarks(frame,p)
-			measurement = shp
+			measurement = st
+			#print(type(measurement[0][0]))
 			final = prediction
-			if (shp==None):
+			if (shp[0,0]!=0.0):
 				posterior = kalman.correct(measurement)
 				final = posterior
 			vidWriter.write(IMAGE)
@@ -71,6 +88,9 @@ def getFaceLandmarks(img,p):
 	#img = imutils.resize(img,width = 320)
 	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	bbox = detector(gray,0)
+	if (len(bbox)==0):
+		s = np.zeros((68,2))
+		return img,s
 	
 	for (i,bbox) in enumerate(bbox):
 		shape = predictor(gray,bbox)
