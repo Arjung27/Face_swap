@@ -157,8 +157,6 @@ def interpolate(img,size,pts,det):
 
 	return size
 
-
-
 def swapFace(d_img,s_img,d_tri,s_tri):
 	L = np.zeros((2,1))
 	D = np.zeros((2,1))
@@ -176,6 +174,16 @@ def swapFace(d_img,s_img,d_tri,s_tri):
 
 	return L,D
 
+def blendFace(hull,dimg,face):
+	mask = np.zeros_like(dimg)
+	cv2.fillPoly(mask, [hull], (255, 255, 255))
+	r = cv2.boundingRect(np.float32([hull]))
+	center = ((r[0]+int(r[2]/2), r[1]+int(r[3]/2)))
+	#cv2.circle(dimg,center,2,(0,255,0),-1)
+	output = cv2.seamlessClone(np.uint8(face), dimg, mask, center, cv2.MIXED_CLONE)
+
+	return output
+
 
 def main():
 	'''
@@ -184,8 +192,7 @@ def main():
 	tarname = './Batman'
 	videoToImage(fname,tarname)
 	'''
-	
-	tname = './Batman/Img60.jpg'
+	tname = './Batman/Img25.jpg'
 	sname = './TestSet_P2/Scarlett.jpg'
 	p = "shape_predictor_68_face_landmarks.dat"
 	img1 = cv2.imread(sname)
@@ -197,9 +204,9 @@ def main():
 	Vs,IMGs = doTriangulate(shps,VP,IMAGEs)
 	a,b = swapFace(img2,img1,V,Vs)
 	A = interpolate(img1,img2,a,b)	
-	cv2.imshow('Output',A)
+	F = blendFace(rectangle,img2,A)
+	cv2.imshow('Blend',F)
 	cv2.waitKey(0)
-	
 
 if __name__ == '__main__':
 	main()																																				
