@@ -1,6 +1,7 @@
 import numpy as np 
 import cv2
 import dlib
+import imutils
 from imutils import face_utils
 from scipy.interpolate import interp2d
 
@@ -20,24 +21,25 @@ def videoToImage(fname,tarname):
 def getFaceLandmarks(fname,p):
 	detector = dlib.get_frontal_face_detector()
 	predictor = dlib.shape_predictor(p)
-
 	img = cv2.imread(fname)
+	#img = imutils.resize(img,width = 320)
 	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	bbox = detector(gray,0)
-
+	
 	for (i,bbox) in enumerate(bbox):
 		shape = predictor(gray,bbox)
 		shape = face_utils.shape_to_np(shape)
 		
 		for (x,y) in shape:
 			cv2.circle(img,(x,y),2,(0,255,0),-1)
-
+			
 	return img,shape
 
 def triangulation(land_points,img):
 	points = np.array(land_points, np.int32)
 	chull = cv2.convexHull(points)
 	rect = cv2.boundingRect(chull)
+	rectangle = np.asarray(rect)
 	subdiv = cv2.Subdiv2D(rect)
 	p_list = []
 	for p in land_points:
@@ -46,40 +48,71 @@ def triangulation(land_points,img):
 		subdiv.insert(p)
 	triangles = subdiv.getTriangleList()
 	triangles = np.array(triangles, dtype=np.int32)
-
 	vert = []
+	VPoint = []
+	pt = []
 	for t in triangles:
+		pt.append((t[0], t[1]))
+		pt.append((t[2], t[3]))
+		pt.append((t[4], t[5]))
+		temp = []
 		pt1 = (t[0], t[1])
 		pt2 = (t[2], t[3])
 		pt3 = (t[4], t[5])
-		vert.append((pt1,pt2,pt3))
-		cv2.line(img, pt1, pt2, (0, 0, 255), 2)
-		cv2.line(img, pt2, pt3, (0, 0, 255), 2)
-		cv2.line(img, pt1, pt3, (0, 0, 255), 2)
-
+		
+		for i in range(3):
+			for j in range(len(points)):
+				if(abs(pt[i][0] - points[j][0]) < 1.0 and abs(pt[i][1] - points[j][1]) < 1.0):
+					temp.append(j)
+		if len(temp)==3:
+			vert.append((points[temp[0]],points[temp[1]],points[temp[2]]))
+			VPoint.append((temp[0],temp[1],temp[2]))
+		pt=[]
+		
+		'''
+		for i in range(len(points)):
+			if (abs(pt1[0]-points[i][0])<1.0 and abs(pt1[1]-points[i][1])<1.0):
+				temp.append(i)
+			if (abs(pt2[0]-points[i][0])<1.0 and abs(pt2[1]-points[i][1])<1.0):
+				temp.append(i)
+			if (abs(pt3[0]-points[i][0])<1.0 and abs(pt3[1]-points[i][1])<1.0):
+				temp.append(i)
+		if len(temp)==3:
+			vert.append((points[temp[0]],points[temp[1]],points[temp[2]]))
+			VPoint.append((temp[0],temp[1],temp[2]))
+		'''
+		cv2.line(img, tuple(points[temp[0]]), tuple(points[temp[1]]), (0, 0, 255), 2)
+		cv2.line(img, tuple(points[temp[1]]), tuple(points[temp[2]]), (0, 0, 255), 2)
+		cv2.line(img, tuple(points[temp[0]]), tuple(points[temp[2]]), (0, 0, 255), 2)
 	vert = np.asarray(vert)
+	VPoint = np.asarray(VPoint)
+	chull = np.reshape(chull,(chull.shape[0],chull.shape[2]))
+	return img,vert,VPoint,chull
 
-	return img,vert
+def doTriangulate(PIndex,TIndex,img):
+	T = []
+	for ti in TIndex:
+		T.append((PIndex[ti[0]],PIndex[ti[1]],PIndex[ti[2]]))
+	T = np.asarray(T)
+	for t in T:
+		cv2.line(img, tuple(t[0]), tuple(t[1]), (0, 0, 255), 2)
+		cv2.line(img, tuple(t[1]), tuple(t[2]), (0, 0, 255), 2)
+		cv2.line(img, tuple(t[0]), tuple(t[2]), (0, 0, 255), 2)
+	return T, img
 
-def affineBary(img,ini_tri,fin_tri):
+def affineBary(img,ini_tri,fin_tri,size):
 	src = ini_tri
 	dst = fin_tri
-	min_y = np.where(src==src[:,1].min())
-	y_min = src[min_y[0].item(),min_y[1].item()]
-	max_y = np.where(src==src[:,1].max())
-	y_max = src[max_y[0].item(),max_y[1].item()]
-	min_x = np.where(src==src[:,0].min())
-	x_min = src[min_x[0].item(),min_x[1].item()]
-	max_x = np.where(src==src[:,0].max())
-	x_max = src[max_x[0].item(),max_x[1].item()]
-
+	x_min = min(src[0,0],src[1,0],src[2,0])
+	x_max = max(src[0,0],src[1,0],src[2,0])
+	y_min = min(src[0,1],src[1,1],src[2,1])
+	y_max = max(src[0,1],src[1,1],src[2,1])
 	x = np.linspace(x_min, x_max, x_max-x_min+1)
 	y = np.linspace(y_min, y_max, y_max-y_min+1)
 	mesh = np.meshgrid(x,y)
 	mesh = np.asarray(mesh)
 	mesh = mesh.reshape(*mesh.shape[:1], -1)
 	grid = np.vstack((mesh, np.ones((1, mesh.shape[1]))))
-	#print(grid[0,1])
 	B = [[src[0][0],src[1][0],src[2][0]],[src[0][1],src[1][1],src[2][1]],[1,1,1]]
 	B_inv = np.linalg.inv(B)
 
@@ -95,33 +128,53 @@ def affineBary(img,ini_tri,fin_tri):
 	Z = np.asarray(Z)
 	Z = Z.T
 	D = np.asarray(D,dtype='int32')
-
+	D = D.T
 	A = [[dst[0][0],dst[1][0],dst[2][0]],[dst[0][1],dst[1][1],dst[2][1]],[1,1,1]]
 	coord = np.dot(A,Z)
 	xA = coord[0,:]/coord[2,:]
 	yA = coord[1,:]/coord[2,:]
-	#print(len(xA))
+
+	C = [xA,yA]
+	C = np.asarray(C)
+
+	return C,D
+
+def interpolate(img,size,pts,det):
 	xi = np.linspace(0, img.shape[1], img.shape[1],endpoint=False)
 	yi = np.linspace(0, img.shape[0], img.shape[0],endpoint=False)
-	dest = np.zeros((img.shape[1],img.shape[0],3), np.uint8)
-
-	for i,(x,y) in enumerate(zip(xA,yA)):
-		blue = img[:,:,0]
-		#print(blue.shape,xi.shape,yi.shape)
-		b = interp2d(xi, yi, blue, kind='cubic')
+	#dest = np.zeros((size[0],size[1],3), np.uint8)
+	blue = img[:,:,0]
+	b = interp2d(xi, yi, blue, kind='cubic')
+	green = img[:,:,1]
+	g = interp2d(xi, yi, green, kind='cubic')
+	red = img[:,:,2]
+	r = interp2d(xi, yi, red, kind='cubic')
+	for i,(x,y) in enumerate(pts):
 		bl = b(x,y)
-		green = img[:,:,1]
-		g = interp2d(xi, yi, green, kind='cubic')
 		gr = g(x,y)
-		red = img[:,:,2]
-		r = interp2d(xi, yi, red, kind='cubic')
 		re = r(x,y)
-		dest[D[i,0],D[i,1]] = (bl,gr,re)
+		size[det[i,1],det[i,0]] = (bl,gr,re)
+
+	return size
 
 
-	return dest
-	
 
+def swapFace(d_img,s_img,d_tri,s_tri):
+	L = np.zeros((2,1))
+	D = np.zeros((2,1))
+
+	for i in range(d_tri.shape[0]):
+		z,m = affineBary(s_img,d_tri[i],s_tri[i],d_img.shape)
+		L = np.concatenate((L,z),axis=1)
+		D = np.concatenate((D,m),axis=1)
+	L = np.asarray(L)
+	L = L.T
+	L = L[1:,:]
+	D = np.asarray(D,dtype='int32')
+	D = D.T
+	D = D[1:,:]
+
+	return L,D
 
 
 def main():
@@ -131,20 +184,19 @@ def main():
 	tarname = './TestFolder'
 	videoToImage(fname,tarname)
 	'''
-	tname = './TestFolder/Img22.jpg'
+	tname = './TestFolder/Img25.jpg'
 	sname = './TestSet_P2/Rambo.jpg'
 	p = "shape_predictor_68_face_landmarks.dat"
-	imge = cv2.imread(sname)
+	img1 = cv2.imread(sname)
+	img2 = cv2.imread(tname)
 
 	IMAGE,shp = getFaceLandmarks(tname,p)
-	IMG,V = triangulation(shp,IMAGE)
-
+	IMG,V,VP,rectangle = triangulation(shp,IMAGE)
 	IMAGEs,shps = getFaceLandmarks(sname,p)
-	IMGs,Vs = triangulation(shps,IMAGEs)	
-	a = affineBary(imge,V[0],Vs[0])
-	#print(a[0][2]+a[1][2]+a[2][2])
-	print(a.shape)
-	cv2.imshow("Output", IMG)
+	Vs,IMGs = doTriangulate(shps,VP,IMAGEs)
+	a,b = swapFace(img2,img1,V,Vs)
+	A = interpolate(img1,img2,a,b)	
+	cv2.imshow('Output',A)
 	cv2.waitKey(0)
 
 
