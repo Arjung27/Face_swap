@@ -34,22 +34,21 @@ def videoDetector(fname,p):
 		IMAGE,shp = getFaceLandmarks(frame,p)
 
 		shp = np.asarray(shp,dtype='float64')
-		st = shp.T
-		st = np.reshape(st,-1)
-		st = st.T
+		st = shp.flatten().T
 		st =np.reshape(st,(st.shape[0],1))
+		#print(st.shape)
 		vel = np.zeros((136,1),dtype='float64')
 		state = np.concatenate((st,vel),axis=0)
-		print(state.shape)
+		#print(state.shape)
 		#print(state.shape)
 		kalman = cv2.KalmanFilter(272, 136, 0)
 		trMatrix = np.zeros((272,272),dtype='float64')
-		for i in range(trMatrix.shape[0]):
-			for j in range(trMatrix.shape[1]):
-				if i==j or (j-136)==i:
-					trMatrix[i][j]=1.0
+		for j in range(trMatrix.shape[0]):
+			for k in range(trMatrix.shape[1]):
+				if j==k or (k-136)==i:
+					trMatrix[j][k]=1.0
 				else:
-					trMatrix[i][j]=0.0
+					trMatrix[j][k]=0.0
 
 		kalman.transitionMatrix = trMatrix
 		#kalman.transitionMatrix = np.array([[1., 0., .1, 0.],
@@ -66,14 +65,28 @@ def videoDetector(fname,p):
 			if ret == False:
 				break
 			prediction = kalman.predict()
+			#print(prediction.shape)
+			#print(prediction[0],prediction[1])
+			#print(prediction[2],prediction[3])
+			prediction = prediction.T
+			prediction = np.reshape(prediction,(136,2))
+			#print(prediction.shape)
+			pred = prediction[:68,:]
+			#for (x,y) in pred:
+			#	cv2.circle(frame,(int(x),int(y)),2,(0,255,0),-1)
 			IMAGE,shp = getFaceLandmarks(frame,p)
+			shp = np.asarray(shp,dtype='float64')
+			st = shp.flatten().T
+			st =np.reshape(st,(st.shape[0],1))
 			measurement = st
 			#print(type(measurement[0][0]))
 			final = prediction
 			if (shp[0,0]!=0.0):
 				posterior = kalman.correct(measurement)
 				final = posterior
-			vidWriter.write(IMAGE)
+			#cv2.imshow('Out',frame)
+			#cv2.waitKey(0)
+			vidWriter.write(frame)
 			i+=1
 			print(i)
 
@@ -97,7 +110,7 @@ def getFaceLandmarks(img,p):
 		shape = face_utils.shape_to_np(shape)
 		
 		for (x,y) in shape:
-			cv2.circle(img,(x,y),2,(0,255,0),-1)
+			cv2.circle(img,(x,y),2,(255,0,0),-1)
 
 	return img,shape
 
