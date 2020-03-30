@@ -148,7 +148,7 @@ def affineBary(img,ini_tri,fin_tri,size):
 
 	return C,D
 
-def interpolate(img,size,pts,det):
+def interpolate(img,dimg,pts,det):
 	xi = np.linspace(0, img.shape[1], img.shape[1],endpoint=False)
 	yi = np.linspace(0, img.shape[0], img.shape[0],endpoint=False)
 	#dest = np.zeros((size[0],size[1],3), np.uint8)
@@ -162,9 +162,9 @@ def interpolate(img,size,pts,det):
 		bl = b(x,y)
 		gr = g(x,y)
 		re = r(x,y)
-		size[det[i,1],det[i,0]] = (bl,gr,re)
+		dimg[det[i,1],det[i,0]] = (bl,gr,re)
 
-	return size
+	return dimg
 
 def swapFace(d_img,s_img,d_tri,s_tri):
 	L = np.zeros((2,1))
@@ -174,7 +174,7 @@ def swapFace(d_img,s_img,d_tri,s_tri):
 		z,m = affineBary(s_img,d_tri[i],s_tri[i],d_img.shape)
 		L = np.concatenate((L,z),axis=1)
 		D = np.concatenate((D,m),axis=1)
-		print(i)
+		#print(i)
 	L = np.asarray(L)
 	L = L.T
 	L = L[1:,:]
@@ -202,26 +202,37 @@ def main():
 	tarname = './Swap'
 	videoToImage(fname,tarname)
 	'''
-
-	tname = './Swap/Img100.jpg'
+	tname = './Swap/Img32.jpg'
 	#sname = './TestSet_P2/Scarlett.jpg'
 	p = "shape_predictor_68_face_landmarks.dat"
 	img1 = cv2.imread(tname)
 	img2 = cv2.imread(tname)
+	img3 = cv2.imread(tname)
 
 	_,shp = getFaceLandmarks(tname,p)
 	shp = np.asarray(shp)
-	shps = shp[0]
-	shp = shp[1]
-	_,V,VP,rectangle = triangulation(shp,img1)
-	
+	M = shp[0]
+	N = shp[1]
+	shps = M
+	shpe = N
+	_,V,VP,rectangle = triangulation(shpe,img2)
 	#IMAGEs,shps = getFaceLandmarks(sname,p)
 	Vs,_ = doTriangulate(shps,VP,img1)
-	a,b = swapFace(img1,img1,V,Vs)
-	A = interpolate(img1,img1,a,b)	
-	F = blendFace(rectangle,img1,A)
-	cv2.imshow('Normal',A)
-	cv2.waitKey(0)
+	a,b = swapFace(img2,img1,V,Vs)
+	A = interpolate(img1,img2,a,b)	
+	F = blendFace(rectangle,img2,A)
+	#-------------------------------
+	
+	shps = N
+	shpe = M
+	_,V,VP,rectangle = triangulation(shpe,img2)
+	Vs,_ = doTriangulate(shps,VP,img3)
+	a,b = swapFace(img2,img3,V,Vs)
+	A = interpolate(img3,img2,a,b)	
+	F = blendFace(rectangle,img2,A)
+
+	#cv2.imshow('Normal',A)
+	#cv2.waitKey(0)
 	cv2.imshow('Blend',F)
 	cv2.waitKey(0)
 
