@@ -24,19 +24,24 @@ def getFaceLandmarks(fname,p):
 	img = cv2.imread(fname)
 	#img = imutils.resize(img,width = 320)
 	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-	bbox = detector(gray,0)
+	bbox = detector(gray,1)
 	
+	points = []
+	face = []
 	for (i,bbox) in enumerate(bbox):
 		shape = predictor(gray,bbox)
 		shape = face_utils.shape_to_np(shape)
 		
 		for (x,y) in shape:
 			cv2.circle(img,(x,y),2,(0,255,0),-1)
-
-	return img,shape
+			points.append((x,y))
+		face.append(points)
+		points = []
+	return img,face
 
 def triangulation(land_points,img):
-	points = np.array(land_points, np.int32)
+	#points = np.array(land_points, np.int32)
+	points = land_points
 	chull = cv2.convexHull(points)
 	rect = cv2.boundingRect(chull)
 	rectangle = np.asarray(rect)
@@ -80,10 +85,11 @@ def triangulation(land_points,img):
 		if len(temp)==3:
 			vert.append((points[temp[0]],points[temp[1]],points[temp[2]]))
 			VPoint.append((temp[0],temp[1],temp[2]))
-		'''
+		
 		cv2.line(img, tuple(points[temp[0]]), tuple(points[temp[1]]), (0, 0, 255), 2)
 		cv2.line(img, tuple(points[temp[1]]), tuple(points[temp[2]]), (0, 0, 255), 2)
 		cv2.line(img, tuple(points[temp[0]]), tuple(points[temp[2]]), (0, 0, 255), 2)
+		'''
 	vert = np.asarray(vert)
 	VPoint = np.asarray(VPoint)
 	chull = np.reshape(chull,(chull.shape[0],chull.shape[2]))
@@ -94,10 +100,12 @@ def doTriangulate(PIndex,TIndex,img):
 	for ti in TIndex:
 		T.append((PIndex[ti[0]],PIndex[ti[1]],PIndex[ti[2]]))
 	T = np.asarray(T)
+	'''
 	for t in T:
 		cv2.line(img, tuple(t[0]), tuple(t[1]), (0, 0, 255), 2)
 		cv2.line(img, tuple(t[1]), tuple(t[2]), (0, 0, 255), 2)
 		cv2.line(img, tuple(t[0]), tuple(t[2]), (0, 0, 255), 2)
+	'''
 	return T, img
 
 def affineBary(img,ini_tri,fin_tri,size):
@@ -126,6 +134,7 @@ def affineBary(img,ini_tri,fin_tri,size):
 			D.append((grid[0,i],grid[1,i]))
 
 	Z = np.asarray(Z)
+
 	Z = Z.T
 	D = np.asarray(D,dtype='int32')
 	D = D.T
@@ -165,6 +174,7 @@ def swapFace(d_img,s_img,d_tri,s_tri):
 		z,m = affineBary(s_img,d_tri[i],s_tri[i],d_img.shape)
 		L = np.concatenate((L,z),axis=1)
 		D = np.concatenate((D,m),axis=1)
+		print(i)
 	L = np.asarray(L)
 	L = L.T
 	L = L[1:,:]
@@ -188,25 +198,33 @@ def blendFace(hull,dimg,face):
 def main():
 	'''
 	#Code to convert video stream to a set of images
-	fname = './TestSet_P2/Test3.mp4'
-	tarname = './Batman'
+	fname = './TestSet_P2/Test2.mp4'
+	tarname = './Swap'
 	videoToImage(fname,tarname)
 	'''
-	tname = './Batman/Img25.jpg'
-	sname = './TestSet_P2/Scarlett.jpg'
+
+	tname = './Swap/Img100.jpg'
+	#sname = './TestSet_P2/Scarlett.jpg'
 	p = "shape_predictor_68_face_landmarks.dat"
-	img1 = cv2.imread(sname)
+	img1 = cv2.imread(tname)
 	img2 = cv2.imread(tname)
 
-	IMAGE,shp = getFaceLandmarks(tname,p)
-	IMG,V,VP,rectangle = triangulation(shp,IMAGE)
-	IMAGEs,shps = getFaceLandmarks(sname,p)
-	Vs,IMGs = doTriangulate(shps,VP,IMAGEs)
-	a,b = swapFace(img2,img1,V,Vs)
-	A = interpolate(img1,img2,a,b)	
-	F = blendFace(rectangle,img2,A)
+	_,shp = getFaceLandmarks(tname,p)
+	shp = np.asarray(shp)
+	shps = shp[0]
+	shp = shp[1]
+	_,V,VP,rectangle = triangulation(shp,img1)
+	
+	#IMAGEs,shps = getFaceLandmarks(sname,p)
+	Vs,_ = doTriangulate(shps,VP,img1)
+	a,b = swapFace(img1,img1,V,Vs)
+	A = interpolate(img1,img1,a,b)	
+	F = blendFace(rectangle,img1,A)
+	cv2.imshow('Normal',A)
+	cv2.waitKey(0)
 	cv2.imshow('Blend',F)
 	cv2.waitKey(0)
+
 
 if __name__ == '__main__':
 	main()																																				
