@@ -25,7 +25,8 @@ def videoDetector(fname,p):
 	frame_width = int(cap.get(3))
 	frame_height = int(cap.get(4))
 	vidWriter = cv2.VideoWriter("./video_output.mp4",cv2.VideoWriter_fourcc(*'mp4v'), 24, (frame_width, frame_height))
-	sname = './TestSet_P2/Rambo.jpg'
+	#sname = './TestSet_P2/Rambo.jpg'
+	sname = './Data/arjun.jpg'
 	img1 = cv2.imread(sname) 
 	i=0
 	X = np.zeros((frame_height,frame_width,3))
@@ -34,12 +35,13 @@ def videoDetector(fname,p):
 		ret,frame = cap.read()
 		if ret == False:
 			break
-		if i==99 or i==106 or i==117 or i ==121 or i ==127 or i ==130 or i==136 or i==147 or i==201:
-			F = X
+		#if i==99 or i==106 or i==117 or i ==121 or i ==127 or i ==130 or i==136 or i==147 or i==201:
+		#	F = X
 		else:
 			cv2.imwrite('temp.jpg',frame)
 			tname = 'temp.jpg'
 			img2 = cv2.imread(tname)
+			img3 = cv2.imread(tname)
 			_,shp = getFaceLandmarks(tname,p)
 			if (shp[0,0]==0):
 				print('miss')
@@ -50,7 +52,7 @@ def videoDetector(fname,p):
 			Vs,IMGs = doTriangulate(shps,VP,img1)
 			a,b = swapFace(img2,img1,V,Vs)
 			A = interpolate(img1,img2,a,b)
-			F = blendFace(rectangle,img2,A)
+			F = blendFace(rectangle,img3,A)
 
 		vidWriter.write(F)
 		X=F
@@ -196,6 +198,10 @@ def affineBary(img,ini_tri,fin_tri,size):
 	Z = Z.T
 	D = np.asarray(D,dtype='int32')
 	D = D.T
+	if len(Z)==0:
+		Cs = np.zeros((1,3))
+		Ds = np.zeros((1,3))
+		return Cs,Ds
 	A = [[dst[0][0],dst[1][0],dst[2][0]],[dst[0][1],dst[1][1],dst[2][1]],[1,1,1]]
 	coord = np.dot(A,Z)
 	xA = coord[0,:]/coord[2,:]
@@ -232,6 +238,8 @@ def swapFace(d_img,s_img,d_tri,s_tri):
 
 	for i in range(d_tri.shape[0]):
 		z,m = affineBary(s_img,d_tri[i],s_tri[i],d_img.shape)
+		if (z[0][0]==0) and (m[0][0]==0):
+			continue
 		L = np.concatenate((L,z),axis=1)
 		D = np.concatenate((D,m),axis=1)
 	L = np.asarray(L)
@@ -263,7 +271,8 @@ def main():
 	
 	tname = './TestFolder/Img25.jpg'
 	sname = './TestSet_P2/Rambo.jpg'
-	fname = './TestSet_P2/Test1.mp4'
+	#fname = './TestSet_P2/Test1.mp4'
+	fname = './Data/abhi_vid.mp4'
 	p = "shape_predictor_68_face_landmarks.dat"
 	videoDetector(fname,p)
 	'''

@@ -26,7 +26,8 @@ def videoDetector(fname,p):
 	frame_height = int(cap.get(4))
 	vidWriter = cv2.VideoWriter("./video_output.mp4",cv2.VideoWriter_fourcc(*'mp4v'), 24, (frame_width, frame_height))
 	i=0
-	sname = './TestSet_P2/Rambo.jpg'
+	#sname = './TestSet_P2/Rambo.jpg'
+	sname = './Data/arjun.jpg'
 	img1 = cv2.imread(sname)
 	X = np.zeros((frame_height,frame_width,3))
 	#while(cap.isOpened()):
@@ -72,6 +73,8 @@ def videoDetector(fname,p):
 			cv2.imwrite('temp.jpg',frame)
 			tname = 'temp.jpg'
 			img2 = cv2.imread(tname)
+			img3 = cv2.imread(tname)
+			print(img2.shape)
 			prediction = kalman.predict()
 			prediction = prediction.T
 			prediction = np.reshape(prediction,(136,2))
@@ -80,11 +83,11 @@ def videoDetector(fname,p):
 			#for (x,y) in pred:
 				#cv2.circle(frame,(int(x),int(y)),2,(0,255,0),-1)
 			#------------------------------------)
-			if (pred[:,0]>480).all():
-				print((pred[:,0]>480).all())
+			if (pred[:,0]>(img2.shape[0]-1)).all():
+				print((pred[:,0]>(img2.shape[0]-1)).all())
 				F = frame
-			elif i==37 or i==38 or i==99 or i==106 or i==117 or i ==121 or i ==127 or i ==130 or i==136 or i==147 or i==201:
-				F = X
+			#elif i==37 or i==38 or i==99 or i==106 or i==117 or i ==121 or i ==127 or i ==130 or i==136 or i==147 or i==201:
+			#	F = X
 			else:
 				pred = np.array(pred,dtype='int32')
 				_,V,VP,rectangle = triangulation(pred,frame)
@@ -92,7 +95,7 @@ def videoDetector(fname,p):
 				Vs,IMGs = doTriangulate(shps,VP,img1)
 				a,b = swapFace(img2,img1,V,Vs)
 				A = interpolate(img1,img2,a,b)
-				F = blendFace(rectangle,img2,A)
+				F = blendFace(rectangle,img3,A)
 			#-------------------------------------
 			IMAGE,shp = getFaceLandmarks(tname,p)
 			shp = np.asarray(shp,dtype='float64')
@@ -135,9 +138,6 @@ def triangulation(land_points,img):
 		pt.append((t[2], t[3]))
 		pt.append((t[4], t[5]))
 		temp = []
-		pt1 = (t[0], t[1])
-		pt2 = (t[2], t[3])
-		pt3 = (t[4], t[5])
 		
 		for i in range(3):
 			for j in range(len(points)):
@@ -148,18 +148,7 @@ def triangulation(land_points,img):
 			VPoint.append((temp[0],temp[1],temp[2]))
 		pt=[]
 		
-		'''
-		for i in range(len(points)):
-			if (abs(pt1[0]-points[i][0])<1.0 and abs(pt1[1]-points[i][1])<1.0):
-				temp.append(i)
-			if (abs(pt2[0]-points[i][0])<1.0 and abs(pt2[1]-points[i][1])<1.0):
-				temp.append(i)
-			if (abs(pt3[0]-points[i][0])<1.0 and abs(pt3[1]-points[i][1])<1.0):
-				temp.append(i)
-		if len(temp)==3:
-			vert.append((points[temp[0]],points[temp[1]],points[temp[2]]))
-			VPoint.append((temp[0],temp[1],temp[2]))
-		'''
+
 		#cv2.line(img, tuple(points[temp[0]]), tuple(points[temp[1]]), (0, 0, 255), 2)
 		#cv2.line(img, tuple(points[temp[1]]), tuple(points[temp[2]]), (0, 0, 255), 2)
 		#cv2.line(img, tuple(points[temp[0]]), tuple(points[temp[2]]), (0, 0, 255), 2)
@@ -300,7 +289,8 @@ def main():
 	
 	tname = './TestFolder/Img25.jpg'
 	sname = './TestSet_P2/Rambo.jpg'
-	fname = './TestSet_P2/Test1.mp4'
+	#fname = './TestSet_P2/Test1.mp4'
+	fname = './Data/abhi_vid.mp4'
 	p = "shape_predictor_68_face_landmarks.dat"
 	videoDetector(fname,p)
 	'''

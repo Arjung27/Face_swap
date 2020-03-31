@@ -178,6 +178,8 @@ def swapFace(d_img,s_img,d_tri,s_tri):
 def blendFace(hull,dimg,face):
 	mask = np.zeros_like(dimg)
 	cv2.fillPoly(mask, [hull], (255, 255, 255))
+	#cv2.imshow('Mask',mask)
+	#cv2.waitKey(0)
 	r = cv2.boundingRect(np.float32([hull]))
 	center = ((r[0]+int(r[2]/2), r[1]+int(r[3]/2)))
 	#cv2.circle(dimg,center,2,(0,255,0),-1)
@@ -188,16 +190,17 @@ def blendFace(hull,dimg,face):
 def main():
 	'''
 	#Code to convert video stream to a set of images
-	fname = './TestSet_P2/Test3.mp4'
-	tarname = './Batman'
+	fname = './Data/abhi_vid.mp4'
+	tarname = './Self'
 	videoToImage(fname,tarname)
 	'''
 	
-	tname = './TestFolder/Img239.jpg'
-	sname = './TestSet_P2/Rambo.jpg'
+	tname = './Self/Img0.jpg'
+	sname = './Data/arjun.jpg'
 	p = "shape_predictor_68_face_landmarks.dat"
 	img1 = cv2.imread(sname)
 	img2 = cv2.imread(tname)
+	img3 = cv2.imread(tname)
 
 	IMAGE,shp = getFaceLandmarks(tname,p)
 	IMG,V,VP,rectangle = triangulation(shp,IMAGE)
@@ -205,7 +208,7 @@ def main():
 	Vs,IMGs = doTriangulate(shps,VP,IMAGEs)
 	a,b = swapFace(img2,img1,V,Vs)
 	A = interpolate(img1,img2,a,b)
-	F = blendFace(rectangle,img2,A)	
+	F = blendFace(rectangle,img3,A)	
 	#cv2.imshow('Output',A)
 	#cv2.waitKey(0)
 	cv2.imshow('Blend',F)
