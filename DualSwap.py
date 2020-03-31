@@ -216,6 +216,7 @@ def main():
 
 	_,shp = getFaceLandmarks(tname,p)
 	shp = np.asarray(shp)
+	print(shp.shape)
 	M = shp[0]
 	N = shp[1]
 	shps = M
