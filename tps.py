@@ -52,11 +52,12 @@ def warp_images(img_tar, img_src, pt_tar, pt_src, wt_x, wt_y, K):
 
     # cv2.imshow("image", img_tar)
     # cv2.waitKey(0)
-    mask = np.zeros_like(img_tar[:,:,0], np.uint8)
-    img_gray = cv2.cvtColor(img_tar, cv2.COLOR_BGR2GRAY)
-    convex_hull = cv2.convexHull(pt_tar)
-    mask = cv2.fillConvexPoly(mask, convex_hull, 255)
-    mask = cv2.bitwise_and(img_gray, img_gray, mask=mask)
+    mask = np.zeros_like(img_tar)
+    # img_gray = cv2.cvtColor(img_tar, cv2.COLOR_BGR2GRAY)
+    convex_hull = cv2.convexHull(pt_tar, returnPoints = True)
+    mask = cv2.fillConvexPoly(mask, convex_hull, (255,255,255))
+    mask = mask[:,:,0]
+    # mask = cv2.bitwise_and(img_gray, img_gray, mask=mask)
     # cv2.imshow("mask", mask)
     # cv2.waitKey(0)
 
@@ -100,9 +101,9 @@ def warp_images(img_tar, img_src, pt_tar, pt_src, wt_x, wt_y, K):
             warped_img[index[a,1],index[a,0],2] = red(x_coord[a], y_coord[a])
             mask_warped_img[index[a,1],index[a,0]] = 255
 
-    r = cv2.boundingRect(mask_warped_img)
+    r = cv2.boundingRect(mask)
     center = ((r[0] + int(r[2] / 2), r[1] + int(r[3] / 2)))
-    output = cv2.seamlessClone(warped_img, img_tar, mask_warped_img, center, cv2.NORMAL_CLONE)
+    output = cv2.seamlessClone(warped_img, img_tar, mask, center, cv2.NORMAL_CLONE)
 
     return output
 
@@ -143,7 +144,7 @@ def thinSplateSplineMat(points_tar, points_src):
     row_two = np.hstack([P_trans, zero_mat])
     splate_mat = np.vstack([row_one, row_two])
     # Tune the labda for better results
-    tune_lam = 1e-06
+    tune_lam = 400
     identity = tune_lam*np.identity(splate_mat.shape[0])
     splate_mat_inv = np.linalg.inv(splate_mat + identity)
     V = np.concatenate([points_src, np.zeros([3,])])
@@ -206,6 +207,8 @@ def main_tps(Flags):
             img_target[int(rects[index].top()-50):int(rects[index].bottom()+50), \
                                     int(rects[index].left()-50):int(rects[index].right()+50)] = warped
 
+            # cv2.imshow("target", img_target)
+            # cv2.waitKey(0)
             vidWriter.write(img_target)
 
             if len(rects) > 1:
