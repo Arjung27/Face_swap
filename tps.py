@@ -50,11 +50,15 @@ def funcxy(index, points_tar, wt_x, wt_y):
 
 def warp_images(img_tar, img_src, pt_tar, pt_src, wt_x, wt_y, K):
 
+    # cv2.imshow("image", img_tar)
+    # cv2.waitKey(0)
     mask = np.zeros_like(img_tar[:,:,0], np.uint8)
     img_gray = cv2.cvtColor(img_tar, cv2.COLOR_BGR2GRAY)
     convex_hull = cv2.convexHull(pt_tar)
     mask = cv2.fillConvexPoly(mask, convex_hull, 255)
     mask = cv2.bitwise_and(img_gray, img_gray, mask=mask)
+    # cv2.imshow("mask", mask)
+    # cv2.waitKey(0)
 
     pt1_min = np.asarray(([min(pt_tar[:,0]),min(pt_tar[:,1])])).astype(np.float32)
     pt2_min = np.asarray(([min(pt_src[:,0]),min(pt_src[:,1])])).astype(np.float32)
@@ -63,8 +67,8 @@ def warp_images(img_tar, img_src, pt_tar, pt_src, wt_x, wt_y, K):
 
     x = np.arange(pt1_min[0],pt1_max[0]).astype(int)
     y = np.arange(pt1_min[1],pt1_max[1]).astype(int)
-
-    X,Y = np.mgrid[x[0]:x[-1]+1,y[0]:y[-1]+1]
+    # print(pt1_min[0],pt1_max[0], pt1_min[1],pt1_max[1], mask.shape)
+    X,Y = np.mgrid[x[0]:x[-1],y[0]:y[-1]]
     X = np.reshape(X.flatten(), [X.shape[0]*X.shape[1],1])
     Y = np.reshape(Y.flatten(), [Y.shape[0]*Y.shape[1],1])
     index = np.hstack([X,Y])
@@ -86,7 +90,7 @@ def warp_images(img_tar, img_src, pt_tar, pt_src, wt_x, wt_y, K):
 
     warped_img = img_tar.copy()
     mask_warped_img = np.zeros_like(warped_img[:,:,0])
-
+    
     for a in range(x_coord.shape[0]):
 
         intesity = mask[index[a,1],index[a,0]]
@@ -215,6 +219,7 @@ def main_tps(Flags):
                 vidWriter.write(img_target)
 
         else:
+            vidWriter.write(img_target)
             continue
 
 if __name__ == '__main__':
