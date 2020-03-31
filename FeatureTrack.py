@@ -34,7 +34,9 @@ def videoDetector(fname,p):
 		ret,frame = cap.read()
 		if ret == False:
 			break
-		IMAGE,shp = getFaceLandmarks(frame,p)
+		cv2.imwrite('init.jpg',frame)
+		lname = 'init.jpg'
+		IMAGE,shp = getFaceLandmarks(lname,p)
 
 		shp = np.asarray(shp,dtype='float64')
 		st = shp.flatten().T
@@ -67,7 +69,9 @@ def videoDetector(fname,p):
 			ret, frame = cap.read()  # read another frame
 			if ret == False:
 				break
-			
+			cv2.imwrite('temp.jpg',frame)
+			tname = 'temp.jpg'
+			img2 = cv2.imread(tname)
 			prediction = kalman.predict()
 			prediction = prediction.T
 			prediction = np.reshape(prediction,(136,2))
@@ -76,21 +80,21 @@ def videoDetector(fname,p):
 			#for (x,y) in pred:
 				#cv2.circle(frame,(int(x),int(y)),2,(0,255,0),-1)
 			#------------------------------------)
-			if i==1:
+			if (pred[:,0]>480).all():
+				print((pred[:,0]>480).all())
 				F = frame
-			elif i==99 or i==106 or i==117 or i ==121 or i ==127 or i ==130 or i==136 or i==147 or i==201:
+			elif i==37 or i==38 or i==99 or i==106 or i==117 or i ==121 or i ==127 or i ==130 or i==136 or i==147 or i==201:
 				F = X
 			else:
 				pred = np.array(pred,dtype='int32')
 				_,V,VP,rectangle = triangulation(pred,frame)
-				_,shps = getFaceLandmarks(img1,p)
+				_,shps = getFaceLandmarks(sname,p)
 				Vs,IMGs = doTriangulate(shps,VP,img1)
-				a,b = swapFace(frame,img1,V,Vs)
-				print(frame.shape)
-				A = interpolate(img1,frame,a,b)
-				F = blendFace(rectangle,frame,A)
+				a,b = swapFace(img2,img1,V,Vs)
+				A = interpolate(img1,img2,a,b)
+				F = blendFace(rectangle,img2,A)
 			#-------------------------------------
-			IMAGE,shp = getFaceLandmarks(frame,p)
+			IMAGE,shp = getFaceLandmarks(tname,p)
 			shp = np.asarray(shp,dtype='float64')
 			st = shp.flatten().T
 			st =np.reshape(st,(st.shape[0],1))
@@ -204,6 +208,10 @@ def affineBary(img,ini_tri,fin_tri,size):
 	Z = Z.T
 	D = np.asarray(D,dtype='int32')
 	D = D.T
+	if len(Z)==0:
+		Cs = np.zeros((1,3))
+		Ds = np.zeros((1,3))
+		return Cs,Ds
 	A = [[dst[0][0],dst[1][0],dst[2][0]],[dst[0][1],dst[1][1],dst[2][1]],[1,1,1]]
 	coord = np.dot(A,Z)
 	xA = coord[0,:]/coord[2,:]
@@ -240,6 +248,8 @@ def swapFace(d_img,s_img,d_tri,s_tri):
 
 	for i in range(d_tri.shape[0]):
 		z,m = affineBary(s_img,d_tri[i],s_tri[i],d_img.shape)
+		if (z[0][0]==0) and (m[0][0]==0):
+			continue
 		L = np.concatenate((L,z),axis=1)
 		D = np.concatenate((D,m),axis=1)
 	L = np.asarray(L)
@@ -260,23 +270,22 @@ def blendFace(hull,dimg,face):
 	output = cv2.seamlessClone(np.uint8(face), dimg, mask, center, cv2.MIXED_CLONE)
 	return output
 
-def getFaceLandmarks(img,p):
+def getFaceLandmarks(fname,p):
 	detector = dlib.get_frontal_face_detector()
 	predictor = dlib.shape_predictor(p)
-	#img = cv2.imread(fname)
+	img = cv2.imread(fname)
 	#img = imutils.resize(img,width = 320)
 	gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 	bbox = detector(gray,0)
 	if (len(bbox)==0):
 		s = np.zeros((68,2))
 		return img,s
-	
 	for (i,bbox) in enumerate(bbox):
 		shape = predictor(gray,bbox)
 		shape = face_utils.shape_to_np(shape)
 		
 		#for (x,y) in shape:
-		#	cv2.circle(img,(x,y),2,(255,0,0),-1)
+		#	cv2.circle(img,(x,y),2,(0,255,0),-1)
 
 	return img,shape
 

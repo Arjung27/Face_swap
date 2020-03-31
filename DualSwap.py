@@ -129,15 +129,18 @@ def affineBary(img,ini_tri,fin_tri,size):
 	Z = []
 	D = []
 	for i in range(bc.shape[1]):
-		if bc[0,i]+bc[1,i]+bc[2,i]-1<0.0001 and 0<=bc[0,i] and 0<=bc[1,i] and 0<=bc[2,i] and bc[0,i]<=1 and bc[1,i]<=1 and bc[2,i]<=1:
+		if 0<=bc[0,i] and 0<=bc[1,i] and 0<=bc[2,i] and bc[0,i]<=1 and bc[1,i]<=1 and bc[2,i]<=1:
 			Z.append(bc[:,i])
 			D.append((grid[0,i],grid[1,i]))
 
 	Z = np.asarray(Z)
-
 	Z = Z.T
 	D = np.asarray(D,dtype='int32')
 	D = D.T
+	if len(Z)==0:
+		Cs = np.zeros((1,3))
+		Ds = np.zeros((1,3))
+		return Cs,Ds
 	A = [[dst[0][0],dst[1][0],dst[2][0]],[dst[0][1],dst[1][1],dst[2][1]],[1,1,1]]
 	coord = np.dot(A,Z)
 	xA = coord[0,:]/coord[2,:]
@@ -172,6 +175,8 @@ def swapFace(d_img,s_img,d_tri,s_tri):
 
 	for i in range(d_tri.shape[0]):
 		z,m = affineBary(s_img,d_tri[i],s_tri[i],d_img.shape)
+		if (z[0][0]==0) and (m[0][0]==0):
+			continue
 		L = np.concatenate((L,z),axis=1)
 		D = np.concatenate((D,m),axis=1)
 		#print(i)
@@ -202,7 +207,7 @@ def main():
 	tarname = './Swap'
 	videoToImage(fname,tarname)
 	'''
-	tname = './Swap/Img32.jpg'
+	tname = './Swap/Img230.jpg'
 	#sname = './TestSet_P2/Scarlett.jpg'
 	p = "shape_predictor_68_face_landmarks.dat"
 	img1 = cv2.imread(tname)
