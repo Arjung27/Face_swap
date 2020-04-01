@@ -26,11 +26,10 @@ Different methods specified under --method flag determines the algorithm that ne
 
 2) Phase 2 (Deep Learning):
 
-This includes the modified version of [code](https://github.com/YadiraF/PRNet). In order to run it for our use case follow the instructions below:
+This includes the modified version of [code](https://github.com/YadiraF/PRNet). Download the PRN trained model at [Google Drive](https://drive.google.com/file/d/1UoE-XuW1SDLUjZmJPkIZ1MLxvQFgmTFH/view), and put it into Data/net-data. In order to run it for our use case follow the instructions below:
 ```
 1. Navigate to the PRNet folder.
-2. Download the PRN trained model at [Google Drive](https://drive.google.com/file/d/1UoE-XuW1SDLUjZmJPkIZ1MLxvQFgmTFH/view), and put it into Data/net-data.
-3. CUDA_VISIBLE_DEVICES=0 python custom_input.py -i <path of the target video> -r <path of the source image> --video <1 if the target is video and 0 if it is image> --output_name <path of the utput video/image> --face <number of faces>
+2. CUDA_VISIBLE_DEVICES=0 python custom_input.py -i <path of the target video> -r <path of the source image> --video <1 if the target is video and 0 if it is image> --output_name <path of the utput video/image> --face <number of faces>
 Example: CUDA_VISIBLE_DEVICES=0 python custom_input.py -i ../TestSet_P2/Test2.mp4 -r ../TestSet_P2/Scarlett.jpg --video 1 --output_name ../TestSet_P2/Data2OutputPRNet.mp4 --face 2
 ```
 If no GOU is present on the system then remove CUDA_VISIBLE_DEVICES=0 from the above command.
