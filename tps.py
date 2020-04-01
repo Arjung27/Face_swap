@@ -7,6 +7,8 @@ import argparse
 import math
 from scipy import interpolate
 from imutils import face_utils
+from Code.FeatureTrack import videoDetector
+from Code.DoubleTrack import videoDoubleDetector
 
 def videoToImage(fname,tarname):
     cap = cv2.VideoCapture(fname)
@@ -164,7 +166,7 @@ def main_tps(Flags):
     image_source = cv2.imread(source_image)
     ret, trial = cap.read()
     h, w, _ = trial.shape
-    print(h, w)
+    #print(h, w)
     vidWriter = cv2.VideoWriter(Flags.output_name,cv2.VideoWriter_fourcc(*'mp4v'), 24, (w, h))
     i = 0
 
@@ -207,8 +209,8 @@ def main_tps(Flags):
             img_target[int(rects[index].top()-50):int(rects[index].bottom()+50), \
                                     int(rects[index].left()-50):int(rects[index].right()+50)] = warped
 
-            # cv2.imshow("target", img_target)
-            # cv2.waitKey(0)
+            #cv2.imshow("target", img_target)
+            #cv2.waitKey(0)
             vidWriter.write(img_target)
 
             if len(rects) > 1:
@@ -229,11 +231,17 @@ if __name__ == '__main__':
     
     Parser = argparse.ArgumentParser()
     Parser.add_argument('--video', default='./TestSet_P2/Test1.mp4', help='Enter the path of target video')
-    Parser.add_argument('--sourceImg', default='TestSet_P2/Rambo.jpg', help='Enter the path of source image')
+    Parser.add_argument('--sourceImg', default='./TestSet_P2/Rambo.jpg', help='Enter the path of source image')
     Parser.add_argument('--method', default='tps', help='Type the name of the method')
     Parser.add_argument('--shape_predictor', default="shape_predictor_68_face_landmarks.dat", help="Prdictor file")
-    Parser.add_argument('--output_name', default='Data1OutputTPS.mp4', help='Name of the output file')
+    Parser.add_argument('--output_name', default='./Data1OutputTPS.mp4', help='Name of the output file')
     Flags = Parser.parse_args()
 
     if Flags.method == 'tps':
         main_tps(Flags)
+    elif Flags.method == 'Tri':
+        print(Flags.output_name)
+        videoDetector(Flags.video,Flags.sourceImg,Flags.output_name,Flags.shape_predictor)
+    elif Flags.method == 'TriD':
+        videoDoubleDetector(Flags.video,Flags.output_name,Flags.shape_predictor)
+
